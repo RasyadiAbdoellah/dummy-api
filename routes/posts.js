@@ -1,87 +1,128 @@
 const express = require('express');
 const router = express.Router();
-const LoremIpsum = require('lorem-ipsum').LoremIpsum
+
+const faker = require('faker')
 const addDays = require('date-fns/addDays')
 const addHours = require('date-fns/addHours')
 const isAfter = require('date-fns/isAfter')
-const parseISO = require('date-fns/parseISO');
+const isValid = require('date-fns/isValid')
 const { parse } = require('date-fns');
-const e = require('express');
 
-const lorem = new LoremIpsum({
-  sentencesPerParagraph: {
-    max: 8,
-    min: 2,
-  },
-  wordsPerSentence : {
-    max: 20,
-    min: 5,
-  }
-})
-
-const types = ['event', 'article', 'topic']
+const types = ['event', 'article']
 const categories = ['finance', 'creative', 'tech']
 
-const postArray = []
+const data = []
+//generate array of dummy posts
+for(let i = 0 ; i < 1000; i++){
 
-for(let i = 0 ; i < 365; i++){
-
-  const dummyContent = lorem.generateParagraphs(Math.floor(Math.random() * 5)).split('\n').map(para => '<p>'+para+'</p>').join('')
-  const exerpt = dummyContent.slice(0, 200)
+  //generate dummy content and exerpt
+  const dummyContent = '<p>' + faker.lorem.paragraphs()
+  const excerpt =  dummyContent.slice(0, 200)
+  const slug = faker.lorem.slug()
   
   const dummyPost = {
     id: i+1,
-    title:lorem.generateWords(Math.floor(Math.random() * 21)),
-    type: types[Math.floor(Math.random() * 3)], //can be event, article, topic
-    exerpt: exerpt + ( dummyContent.length > 200 ? '...' : '') + (exerpt.endsWith('</p>') ? '' : '</p>'), //WP API sends out content in this format
-    content: dummyContent, //WP API sends out content in this format
-    category: [categories[Math.floor(Math.random() * 3)]], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories
+    title: slug.split('-').join(' '),
+    slug: slug,
+    type: types[i%2], //Cycles through types. use Math.floor(Math.random() * 3) to randomly assign post type
+    excerpt: excerpt + ( dummyContent.length > 200 ? '...' : '') + (excerpt.endsWith('</p>') ? '' : '</p>'),
+    content: dummyContent,
+    category: [categories[i%3]], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories. First element in array cycles through categories, second element is randomly picked
     author: {
-      name: lorem.generateWords(2),
-      url: "profile img url"
+      name: faker.name.findName(),
+      url: faker.image.people(128,128)
     },
     dateCreated : addDays(new Date('2019-01-01T09:00:00+07:00'), i),
-    url : "page url",
+    url : faker.internet.url(),
   }
   if(dummyPost.type === types[0]) {
     //IF POST TYPE = EVENT
     let eventDate = addDays(new Date('2019-01-01T10:00:00+07:00'), i+2)
     dummyPost.startDate = eventDate,
     dummyPost.endDate = addHours(eventDate, 1),
-    dummyPost.location = ["location names or link to location on map application", "array of links if more than one location"],
+    dummyPost.location = [faker.fake('{{address.streetAddress}}, {{address.city}} {{address.zipCode}}'),faker.fake('{{address.streetAddress}}, {{address.city}} {{address.zipCode}}')],
     dummyPost.quota = 100 //number of available space
   }
 
-  postArray.push(dummyPost)
+  data.push(dummyPost)
 
 }
 
+const postList = data.map(thePost => {
+  const copied = Object.assign({}, thePost)
+  if(copied.type === types[1]){
+    copied.authorName = copied.author.name
+  }
+  delete copied.author
+  delete copied.content
+
+  return copied
+})
 
 
-/* GET home page. */
+/* GET posts. */
 router.get('/', function(req, res, next) {
 
-  const {offset = 0} = req.query
+  let {offset = 0, limit = 10} = req.query
+  let resArray = postList.map(post => post)
+  
+  try{
 
-  let resArray = postArray.map(post => post)
+    offset = parseInt(offset)
+    limit = parseInt(limit)
 
-  if(req.query.type){
-    resArray = resArray.filter(post => post.type === req.query.type)
+    if(isNaN(offset) || isNaN(limit)) {
+      throw new Error('Invalid offset/limit')
+    }
+
+    if(req.query.type){
+      
+      if(!types.includes(req.query.type)){
+        throw new Error('invalid type')
+      }
+
+      resArray = resArray.filter(post => post.type === req.query.type)
+
+    }
+  
+    if(req.query.date){
+      
+      const theDate = parse(req.query.date, 'yyyyMMdd', new Date())
+
+      if (!isValid(theDate)){
+        throw new Error('invalid date')
+      }
+
+      resArray = resArray.filter(post => isAfter(post.dateCreated, theDate ))
+    }
+
+    res.status(200).send({
+      count: resArray.length,
+      data: resArray.slice(offset, offset+limit)
+    });
+    
+  } catch (error) {
+    res.status(400).send(error.toString())
   }
 
-  if(req.query.date){
-    resArray = resArray.filter(post => isAfter(post.dateCreated, parse(req.query.date, 'yyyyMMdd', new Date())))
-  }
 
-  res.status(200).send(resArray.slice(offset, +offset+20));
 });
 
 router.get('/:id', function (req, res, next) {
-  if(postArray[+req.params.id-1]){
-    res.send(postArray[+req.params.id-1])
-  } else {
-    res.status(404).send('Post not found')
+
+  try {
+    const foundPost = data.find(post => req.params.id === (!parseInt(req.params.id) ? post.slug : post.id))
+    
+    if (foundPost.length === 0){
+      throw new Error('Post not found')
+    }
+
+    res.send(foundPost)
+
+  } catch (error) {
+    res.status(404).send(error.toString())
   }
+
 })
 
 module.exports = router;
