@@ -38,7 +38,7 @@ for(let i = 0 ; i < 1000; i++){
       name: faker.name.findName(),
       url: faker.image.people(128,128)
     },
-    imgUrl: coinFlip() ? faker.image.imageUrl(1200, 400) : '',
+    imgUrl: coinFlip() ? "https://jenius-cocreate.s3.ap-southeast-1.amazonaws.com/assets/2020/11/25134436/feature-bener.png" : '',
     datePublished : addDays(new Date('2019-01-01T09:00:00+07:00'), i),
     // url : faker.internet.url(),
   }
@@ -128,7 +128,7 @@ router.get('/:id', function (req, res, next) {
       throw new Error('Post not found')
     }
 
-    res.send(foundPost)
+    res.status(200).send(foundPost)
 
   } catch (error) {
     res.status(404).send(error.toString())
