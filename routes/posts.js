@@ -8,23 +8,29 @@ const isAfter = require('date-fns/isAfter')
 const isValid = require('date-fns/isValid')
 const { parse } = require('date-fns');
 
+//returns either 1 or 0
+function coinFlip() {
+  return (Math.floor(Math.random() * 2))
+}
+
 const types = ['event', 'article']
 const categories = ['finance', 'creative', 'tech']
 
 const data = []
+
 //generate array of dummy posts
 for(let i = 0 ; i < 1000; i++){
 
   //generate dummy content and exerpt
   const dummyContent = '<p>' + faker.lorem.paragraphs()
   const excerpt =  dummyContent.slice(0, 200)
-  const slug = faker.lorem.slug()
+  const title = faker.lorem.sentence()
   
   const dummyPost = {
     id: i+1,
-    title: slug.split('-').join(' '),
-    slug: slug,
-    type: types[i%2], //Cycles through types. use Math.floor(Math.random() * 3) to randomly assign post type
+    title,
+    slug: title.replace(/ /g, '-').replace(/[^\w\-]+/g, '').toLowerCase(),
+    type: types[coinFlip()], //Cycles through types. use Math.floor(Math.random() * 3) to randomly assign post type
     excerpt: excerpt + ( dummyContent.length > 200 ? '...' : '') + (excerpt.endsWith('</p>') ? '' : '</p>'),
     content: dummyContent,
     category: [categories[i%3]], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories. First element in array cycles through categories, second element is randomly picked
@@ -32,8 +38,9 @@ for(let i = 0 ; i < 1000; i++){
       name: faker.name.findName(),
       url: faker.image.people(128,128)
     },
-    dateCreated : addDays(new Date('2019-01-01T09:00:00+07:00'), i),
-    url : faker.internet.url(),
+    imgUrl: coinFlip() ? faker.image.imageUrl(1200, 400) : '',
+    datePublished : addDays(new Date('2019-01-01T09:00:00+07:00'), i),
+    // url : faker.internet.url(),
   }
   if(dummyPost.type === types[0]) {
     //IF POST TYPE = EVENT
@@ -48,6 +55,7 @@ for(let i = 0 ; i < 1000; i++){
 
 }
 
+//generates post list. Post list does not include author img and full content
 const postList = data.map(thePost => {
   const copied = Object.assign({}, thePost)
   if(copied.type === types[1]){
@@ -109,9 +117,12 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/:id', function (req, res, next) {
+  
+  const isNum = !!parseInt(req.params.id)
+  const id = isNum ? parseInt(req.params.id) : req.params.id
 
   try {
-    const foundPost = data.find(post => req.params.id === (!parseInt(req.params.id) ? post.slug : post.id))
+    const foundPost = data.find(post =>  id === (isNum ? post.id : post.slug))
     
     if (foundPost.length === 0){
       throw new Error('Post not found')
