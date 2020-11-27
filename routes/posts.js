@@ -16,7 +16,9 @@ function coinFlip() {
 const types = ['event', 'article']
 const categories = ['finance', 'creative', 'tech']
 
-const data = []
+const postData = []
+
+const pinnedData = []
 
 //generate array of dummy posts
 for(let i = 0 ; i < 1000; i++){
@@ -25,7 +27,7 @@ for(let i = 0 ; i < 1000; i++){
   const dummyContent = '<p>' + faker.lorem.paragraphs()
   const excerpt =  dummyContent.slice(0, 200)
   const title = faker.lorem.sentence()
-  
+
   const dummyPost = {
     id: i+1,
     title,
@@ -44,7 +46,8 @@ for(let i = 0 ; i < 1000; i++){
       description: faker.lorem.sentences(),
       title: `Jenius CoCreate - ${title}`,
       url : faker.internet.url(),
-    }
+    },
+    pinned: pinnedData.length <= 5 && coinFlip(),
   }
   if(dummyPost.type === types[0]) {
     //IF POST TYPE = EVENT
@@ -55,12 +58,16 @@ for(let i = 0 ; i < 1000; i++){
     dummyPost.quota = 100 //number of available space
   }
 
-  data.push(dummyPost)
+  if(dummyPost.pinned) {
+    pinnedData.push(dummyPost)
+  } else {
+    postData.push(dummyPost)
+  }
 
 }
 
 //generates post list. Post list does not include author img and full content
-const postList = data.map(thePost => {
+const postList = postData.map(thePost => {
   const copied = Object.assign({}, thePost)
   if(copied.type === types[1]){
     copied.authorName = copied.author.name
@@ -76,32 +83,34 @@ const postList = data.map(thePost => {
 router.get('/', function(req, res, next) {
 
   let {offset = 0, limit = 10} = req.query
+  const pinnedArray = pinnedData.map(post => post)
   let resArray = postList.map(post => post)
-  
+  pinnedArray.reverse()
+
   try{
 
     offset = parseInt(offset)
     limit = parseInt(limit)
 
-    if(isNaN(offset) || isNaN(limit)) {
-      throw new Error('Invalid offset/limit')
-    }
+    // if(isNaN(offset) || isNaN(limit)) {
+    //   throw new Error('Invalid offset/limit')
+    // }
 
     if(req.query.type){
       
-      if(!types.includes(req.query.type)){
-        throw new Error('invalid type')
-      }
-
+      // if(!types.includes(req.query.type)){
+      //   throw new Error('invalid type')
+      // }
+      pinnedArray = pinnedArray.filter(post => post.type === req.query.type)
       resArray = resArray.filter(post => post.type === req.query.type)
 
     }
 
     if(req.query.category) {
-      if(!categories.includes(req.query.category)){
-        throw new Error('invalid category')
-      }
-
+      // if(!categories.includes(req.query.category)){
+      //   throw new Error('invalid category')
+      // }
+      pinnedArray = pinnedArray.filter(post => post.category === req.query.category)
       resArray = resArray.filter(post => post.category === req.query.category)
 
     }
@@ -110,12 +119,14 @@ router.get('/', function(req, res, next) {
       
       const theDate = parse(req.query.date, 'yyyyMMdd', new Date())
 
-      if (!isValid(theDate)){
-        throw new Error('invalid date')
-      }
+      // if (!isValid(theDate)){
+      //   throw new Error('invalid date')
+      // }
 
       resArray = resArray.filter(post => isAfter(post.dateCreated, theDate ))
     }
+
+
 
     res.status(200).send({
       count: resArray.length,
@@ -124,7 +135,8 @@ router.get('/', function(req, res, next) {
         all: categories,
         active: req.query.categories || []
       },
-      posts: resArray.slice(offset, offset+limit)
+      pinnedPosts: pinnedArray,
+      posts: resArray.slice(offset, offset+limit),
     });
     
   } catch (error) {
@@ -140,7 +152,7 @@ router.get('/:id', function (req, res, next) {
   const id = isNum ? parseInt(req.params.id) : req.params.id
 
   try {
-    const foundPost = data.find(post =>  id === (isNum ? post.id : post.slug))
+    const foundPost = postData.find(post =>  id === (isNum ? post.id : post.slug))
     
     if (foundPost.length === 0){
       throw new Error('Post not found')
