@@ -40,7 +40,11 @@ for(let i = 0 ; i < 1000; i++){
     },
     imgUrl: coinFlip() ? "https://jenius-cocreate.s3.ap-southeast-1.amazonaws.com/assets/2020/11/25134436/feature-bener.png" : '',
     datePublished : addDays(new Date('2019-01-01T09:00:00+07:00'), i),
-    // url : faker.internet.url(),
+    meta: {
+      description: faker.lorem.sentences(),
+      title: `Jenius CoCreate - ${title}`,
+      url : faker.internet.url(),
+    }
   }
   if(dummyPost.type === types[0]) {
     //IF POST TYPE = EVENT
@@ -106,7 +110,12 @@ router.get('/', function(req, res, next) {
 
     res.status(200).send({
       count: resArray.length,
-      data: resArray.slice(offset, offset+limit)
+      offset,
+      filter:{
+        all: categories,
+        active: req.query.categories || []
+      },
+      posts: resArray.slice(offset, offset+limit)
     });
     
   } catch (error) {
