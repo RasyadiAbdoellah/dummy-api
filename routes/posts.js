@@ -96,6 +96,15 @@ router.get('/', function(req, res, next) {
       resArray = resArray.filter(post => post.type === req.query.type)
 
     }
+
+    if(req.query.category) {
+      if(!categories.includes(req.query.category)){
+        throw new Error('invalid category')
+      }
+
+      resArray = resArray.filter(post => post.category === req.query.category)
+
+    }
   
     if(req.query.date){
       

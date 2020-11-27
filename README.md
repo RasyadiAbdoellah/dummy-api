@@ -15,11 +15,17 @@ response: 'Hello'
 
 ## GET /posts
 
-response 200: array of posts. Array length = 20
+Available queries:
+* limit = number of posts in response
+* offset = how many posts to skip. e.g. offset=10 first post in response will be id: 11.
+* type = filters by post type. Must be either 'article' or 'event'. Returns posts where type === post.type.
+* category = filters by post category. Must be 'tech', 'creative', or 'finance. Returns posts where category === post.category.
 
+response 200: array of posts. Array length = 20
+respsonse 400: error message
 ## GET /posts/:id
 
-response 200: posts where :id = post id
+response 200: posts where `:id === post.id` or where `:id === post.slug`
 
 response 404: 'Post not found'
 
