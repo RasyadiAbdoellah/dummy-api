@@ -1,100 +1,27 @@
 const express = require('express');
 const router = express.Router();
 
-const faker = require('faker')
-const addDays = require('date-fns/addDays')
-const addHours = require('date-fns/addHours')
-const isAfter = require('date-fns/isAfter')
-const isValid = require('date-fns/isValid')
-const { parse } = require('date-fns');
-
-//returns either 1 or 0
-function coinFlip() {
-  return (Math.floor(Math.random() * 2))
-}
-
-const types = ['event', 'article']
-const categories = ['finance', 'creative', 'tech']
-
-const postData = []
-
-const pinnedData = []
-
-//generate array of dummy posts
-for(let i = 0 ; i < 1000; i++){
-
-  //generate dummy content and exerpt
-  const dummyContent = '<p>' + faker.lorem.paragraphs()
-  const excerpt =  dummyContent.slice(0, 200)
-  const title = faker.lorem.sentence()
-
-  const dummyPost = {
-    id: i+1,
-    title,
-    slug: title.replace(/ /g, '-').replace(/[^\w\-]+/g, '').toLowerCase(),
-    type: types[coinFlip()], //Cycles through types. use Math.floor(Math.random() * 3) to randomly assign post type
-    excerpt: excerpt + ( dummyContent.length > 200 ? '...' : '') + (excerpt.endsWith('</p>') ? '' : '</p>'),
-    content: dummyContent,
-    category: [categories[i%3]], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories. First element in array cycles through categories, second element is randomly picked
-    author: {
-      name: faker.name.findName(),
-      url: faker.image.people(128,128)
-    },
-    imgUrl: coinFlip() ? "https://jenius-cocreate.s3.ap-southeast-1.amazonaws.com/assets/2020/11/25134436/feature-bener.png" : '',
-    datePublished : addDays(new Date('2019-01-01T09:00:00+07:00'), i),
-    meta: {
-      description: faker.lorem.sentences(),
-      title: `Jenius CoCreate - ${title}`,
-      url : faker.internet.url(),
-    },
-    pinned: pinnedData.length <= 5 && coinFlip(),
-  }
-  if(dummyPost.type === types[0]) {
-    //IF POST TYPE = EVENT
-    let eventDate = addDays(new Date('2019-01-01T10:00:00+07:00'), i+2)
-    dummyPost.startDate = eventDate,
-    dummyPost.endDate = addHours(eventDate, 1),
-    dummyPost.location = [faker.fake('{{address.streetAddress}}, {{address.city}} {{address.zipCode}}'),faker.fake('{{address.streetAddress}}, {{address.city}} {{address.zipCode}}')],
-    dummyPost.quota = 100 //number of available space
-  }
-
-  if(dummyPost.pinned) {
-    pinnedData.push(dummyPost)
-  } else {
-    postData.push(dummyPost)
-  }
-
-}
+const data = require('../data')
+const {postData, types, categories } = data
 
 //generates post list. Post list does not include author img and full content
-const postList = postData.map(thePost => {
-  const copied = Object.assign({}, thePost)
-  if(copied.type === types[1]){
-    copied.authorName = copied.author.name
-  }
-  delete copied.author
-  delete copied.content
-
-  return copied
-})
 
 
 /* GET posts. */
 router.get('/', function(req, res, next) {
-
+  
+  const resArray = postData.map(thePost => {
+    const copied = Object.assign({}, thePost)
+    return copied
+  })
   let {offset = 0, limit = 10} = req.query
-  const pinnedArray = pinnedData.map(post => post)
-  let resArray = postList.map(post => post)
+  const pinnedArray = resArray.filter(post => post.pinned )
   pinnedArray.reverse()
 
   try{
 
     offset = parseInt(offset)
     limit = parseInt(limit)
-
-    // if(isNaN(offset) || isNaN(limit)) {
-    //   throw new Error('Invalid offset/limit')
-    // }
 
     if(req.query.type){
       
@@ -131,11 +58,12 @@ router.get('/', function(req, res, next) {
     res.status(200).send({
       count: resArray.length,
       offset,
-      filter:{
+      limit,
+      categories:{
         all: categories,
-        active: req.query.categories || []
+        active: req.query.categories || {}
       },
-      pinnedPosts: pinnedArray,
+      pinnedPosts: pinnedArray.slice(0, 4),
       posts: resArray.slice(offset, offset+limit),
     });
     
