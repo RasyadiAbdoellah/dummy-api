@@ -10,13 +10,12 @@ const {postData, types, categories } = data
 /* GET posts. */
 router.get('/', function(req, res, next) {
   
-  const resArray = postData.map(thePost => {
+  let resArray = postData.map(thePost => {
     const copied = Object.assign({}, thePost)
     return copied
   })
   let {offset = 0, limit = 10} = req.query
-  const pinnedArray = resArray.filter(post => post.pinned )
-  pinnedArray.reverse()
+
 
   try{
 
@@ -28,7 +27,6 @@ router.get('/', function(req, res, next) {
       // if(!types.includes(req.query.type)){
       //   throw new Error('invalid type')
       // }
-      pinnedArray = pinnedArray.filter(post => post.type === req.query.type)
       resArray = resArray.filter(post => post.type === req.query.type)
 
     }
@@ -37,8 +35,33 @@ router.get('/', function(req, res, next) {
       // if(!categories.includes(req.query.category)){
       //   throw new Error('invalid category')
       // }
-      pinnedArray = pinnedArray.filter(post => post.category === req.query.category)
-      resArray = resArray.filter(post => post.category === req.query.category)
+      resArray = resArray.filter(post => {
+        //convert to category array to object
+        const postCat = post.category.reduce((obj, val) => {
+          obj[val] = true
+          return obj
+        }, {})
+        
+        let result = 0
+
+        if(Array.isArray(req.query.category)){
+          
+          for(const category of req.query.category){
+            if(postCat.hasOwnProperty(category)){
+              // result++ // AND logic
+              result = true // OR logic
+            }
+          }
+          // result = result === req.query.category.length // AND logic
+
+        } else {
+          if(postCat.hasOwnProperty(req.query.category)){
+            result = true
+          }
+        }
+
+        return result
+      })
 
     }
   
@@ -50,9 +73,11 @@ router.get('/', function(req, res, next) {
       //   throw new Error('invalid date')
       // }
 
-      resArray = resArray.filter(post => isAfter(post.dateCreated, theDate ))
+      resArray = resArray.filter(post => isAfter(post.datePublished, theDate ))
     }
-
+    const pinnedArray = resArray.filter(post => post.pinned )
+    pinnedArray.reverse()
+    resArray = resArray.filter(post => !post.pinned)
 
 
     res.status(200).send({
@@ -61,7 +86,7 @@ router.get('/', function(req, res, next) {
       limit,
       categories:{
         all: categories,
-        active: req.query.categories || {}
+        active: req.query.category || []
       },
       pinnedPosts: pinnedArray.slice(0, 4),
       posts: resArray.slice(offset, offset+limit),

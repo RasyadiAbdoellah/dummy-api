@@ -31,7 +31,7 @@ for(let i = 0 ; i < 1000; i++){
     type: types[coinFlip()], //randomly returns either 0 or 1
     excerpt: excerpt + ( dummyContent.length > 200 ? '...' : '') + (excerpt.endsWith('</p>') ? '' : '</p>'),
     content: dummyContent,
-    category: [categories[i%3]], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories. First element in array cycles through categories, second element is randomly picked
+    category: [categories[i%3], categories[(Math.floor(Math.random() * 3))]], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories. First element in array cycles through categories, second element is randomly picked
     author: {
       name: faker.name.findName(),
       imgUrl: faker.image.people(128,128)
