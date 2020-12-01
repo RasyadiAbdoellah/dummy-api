@@ -4,9 +4,6 @@ const router = express.Router();
 const data = require('../data')
 const {postData, types, categories } = data
 
-//generates post list. Post list does not include author img and full content
-
-
 /* GET posts. */
 router.get('/', function(req, res, next) {
   
@@ -14,24 +11,24 @@ router.get('/', function(req, res, next) {
     const copied = Object.assign({}, thePost)
     return copied
   })
-  let {offset = 0, limit = 10} = req.query
 
+  let {offset = 0, limit = 10, category, type, date} = req.query
 
   try{
 
     offset = parseInt(offset)
     limit = parseInt(limit)
 
-    if(req.query.type){
+    if(type){
       
-      // if(!types.includes(req.query.type)){
+      // if(!types.includes(type)){
       //   throw new Error('invalid type')
       // }
-      resArray = resArray.filter(post => post.type === req.query.type)
+      resArray = resArray.filter(post => post.type === type)
 
     }
 
-    if(req.query.category) {
+    if(category) {
       // if(!categories.includes(req.query.category)){
       //   throw new Error('invalid category')
       // }
@@ -44,18 +41,18 @@ router.get('/', function(req, res, next) {
         
         let result = 0
 
-        if(Array.isArray(req.query.category)){
+        if(Array.isArray(category)){
           
-          for(const category of req.query.category){
+          for(const category of category){
             if(postCat.hasOwnProperty(category)){
               // result++ // AND logic
               result = true // OR logic
             }
           }
-          // result = result === req.query.category.length // AND logic
+          // result = result === category.length // AND logic
 
         } else {
-          if(postCat.hasOwnProperty(req.query.category)){
+          if(postCat.hasOwnProperty(category)){
             result = true
           }
         }
@@ -65,9 +62,9 @@ router.get('/', function(req, res, next) {
 
     }
   
-    if(req.query.date){
+    if(date){
       
-      const theDate = parse(req.query.date, 'yyyyMMdd', new Date())
+      const theDate = parse(date, 'yyyyMMdd', new Date())
 
       // if (!isValid(theDate)){
       //   throw new Error('invalid date')
@@ -75,9 +72,9 @@ router.get('/', function(req, res, next) {
 
       resArray = resArray.filter(post => isAfter(post.datePublished, theDate ))
     }
-    const pinnedArray = resArray.filter(post => post.pinned )
-    pinnedArray.reverse()
-    resArray = resArray.filter(post => !post.pinned)
+
+    const pinnedArray = resArray.filter(post => post.pinned).reverse().slice(0, 4)
+    resArray = resArray.filter(post => !post.pinned).slice(offset, offset+limit)
 
 
     res.status(200).send({
@@ -86,10 +83,10 @@ router.get('/', function(req, res, next) {
       limit,
       categories:{
         all: categories,
-        active: req.query.category || []
+        active: category || []
       },
-      pinnedPosts: pinnedArray.slice(0, 4),
-      posts: resArray.slice(offset, offset+limit),
+      pinnedPosts: pinnedArray,
+      posts: resArray,
     });
     
   } catch (error) {
