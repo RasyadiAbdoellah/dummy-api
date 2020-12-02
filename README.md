@@ -15,9 +15,9 @@ response: 'Hello'
 
 ## GET /posts
 
-Available queries:
+Available query parameters:
 * limit = number of posts in response
-* offset = how many posts to skip. e.g. offset=10 first post in response will be id: 11.
+* offset = how many posts to skip. e.g. offset=10 will skip 10 posts.
 * type = filters by post type. Must be either 'article' or 'event'. Returns posts where type === post.type.
 * category = filters by post category. Must be 'tech', 'creative', or 'finance. Returns posts where category === post.category.
 
@@ -48,8 +48,8 @@ response 200: post where `:id === post.id` or where `:id === post.slug`
   "title": "post title",
   "slug": "post-slug",
   "type": "event", //can be event, article, topic
-  "excerpt": "excerpt", //WP API sends out content in this format,
-  "content": "content", //WP API sends out content in this format
+  "excerpt": "<p>excerpt</p>", //WP API sends out content in this format,
+  "content": "<p>content</p>", //WP API sends out content in this format
   "category": ["category 1", "category 2"], //#finance, #creative, #tech. For UI and filtering. Post can have 1 or more categories
   "author": {
     "name": "author name",
@@ -73,6 +73,46 @@ response 200: post where `:id === post.id` or where `:id === post.slug`
 ```
 response 404: 'Post not found'
 
+## GET /posts/:id/comments
+
+Available query parameters:
+* limit = number of comments in response
+* offset = how many comments to skip. e.g. offset=10 will skip 10 comments.
+
+response 200: comments for post where `:id === post.id` or where `:id === post.slug`
+```json
+{
+  "count": 12, //total number of comments
+  "offset": 0, //offset of response
+  "limit": 5, //limit of response. Default is 5,
+  "comments": [
+    {
+      "id": 1, //comment ID
+      "author": {
+        "name": "user name",
+        "imgUrl": "profile url img",
+      },
+      "content": "<p>comment content</p>",
+      "replies": [
+        {
+          "id": 2, //comment ID
+          "author": {
+            "name": "user name",
+            "imgUrl": "profile url img",
+          },
+          "content": "<p>comment content</p>",
+          "parent": {
+            "id": 1, //parent comment ID
+            "author": {
+              "name": "user name",
+            },
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 ## GET /banner
 response 200: array of banner object
 ```json
@@ -91,5 +131,6 @@ response 200: array of banner object
 ```
 ## GET /users
 
+WIP
 response 200: 'Users'
 

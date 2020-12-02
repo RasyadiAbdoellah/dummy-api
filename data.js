@@ -28,24 +28,48 @@ function genContent() {
   return '<p>' + faker.lorem.paragraphs() + '</p>'
 }
 
+//Mock comment data with an array of replies
+
+
+
 //generate array of dummy posts
 for(let i = 0 ; i < 1000; i++){
-  
-  const comment = {
-    id: 1,
-    author: genAuthor(),
-    content: genContent()
-  }
-  
-  //Mock comment data with an array of replies
-  const comments = {
-    ...comment,
-    replies: [
-      {content: genContent(), author: genAuthor(), id: 2, parent: {id: 1, author: comment.author}},
-      {content: genContent(), author: genAuthor(), id: 3, parent: {id: 1, author: comment.author}},
-    ]
-  }
 
+  const comments = []
+  
+  for(let j = 1 ; j <= 50; j++) {
+  
+    const comment = {
+      id: j,
+      author: genAuthor(),
+      content: genContent()
+    }
+    const replies = []
+  
+    let replyNum, replyLimit = Math.floor(Math.random() * 5)
+    for (replyNum = 0; replyNum <= replyLimit; replyNum++) {
+      // parent is randomly assigned to top level comment or previous reply
+      const parent = coinFlip() ? ((replies.length !== 0 ? replies[Math.floor(Math.random() * replyNum)] : comment )) : comment
+      const reply = {
+        id : j+replyNum+1,
+        author: genAuthor(),
+        content: genContent(),
+        parent : {
+          id: parent.id,
+          author: {
+            name: parent.author.name
+          }
+        }
+      }
+      replies.push(reply)
+    }
+  
+    comments.push({
+      ...comment,
+      replies
+    })
+    j+=replyNum
+  }
   //generate dummy content and exerpt
   const dummyContent = '<p>' + faker.lorem.paragraphs() + '</p>'
   const excerpt =  dummyContent.slice(0, 200)
@@ -68,8 +92,10 @@ for(let i = 0 ; i < 1000; i++){
       title: `Jenius CoCreate - ${title}`,
     },
     pinned: coinFlip(),
-    comments:[{...comments}]
+    comments,
   }
+
+
   if(dummyPost.type === types[0]) {
     //IF POST TYPE = EVENT
     let eventDate = addDays(new Date('2019-01-01T10:00:00+07:00'), i+2)
@@ -90,5 +116,6 @@ module.exports = {
   types,
   categories,
   postData,
-  bannerData
+  bannerData,
+
 }

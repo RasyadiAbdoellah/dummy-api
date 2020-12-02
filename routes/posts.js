@@ -1,4 +1,5 @@
 const express = require('express');
+const { off } = require('../app');
 const router = express.Router();
 
 const data = require('../data')
@@ -9,6 +10,7 @@ router.get('/', function(req, res, next) {
   
   let resArray = postData.map(thePost => {
     const copied = Object.assign({}, thePost)
+    delete copied.comments
     return copied
   })
 
@@ -81,9 +83,9 @@ router.get('/', function(req, res, next) {
       count: resArray.length,
       offset,
       limit,
-      categories:{
-        all: categories,
-        active: category || []
+      categories,
+      filters: {
+        category: [category]
       },
       pinnedPosts: pinnedArray,
       posts: resArray,
@@ -114,6 +116,33 @@ router.get('/:id', function (req, res, next) {
     res.status(404).send(error.toString())
   }
 
+})
+
+
+router.get('/:id/comments', function (req, res, next) {
+  const isNum = !!parseInt(req.params.id)
+  const id = isNum ? parseInt(req.params.id) : req.params.id
+
+  let {offset = 0, limit = 5} = req.query
+  offset = parseInt(offset)
+  limit = parseInt(limit)
+
+  try {
+    const foundPost = postData.find(post =>  id === (isNum ? post.id : post.slug))
+    
+    if (foundPost.length === 0){
+      throw new Error('Post not found')
+    }
+
+    res.status(200).send({
+      count: foundPost.comments.length,
+      offset,
+      comments: foundPost.comments.slice(offset, limit)
+    })
+
+  } catch (error) {
+    res.status(404).send(error.toString())
+  }
 })
 
 module.exports = router;
